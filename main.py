@@ -19,11 +19,11 @@ if TESTING_MODE:
 app.config.from_object(config)
 
 # Local Instance:
-# cred = firebase_admin.credentials.Certificate('<Path to JSON credentials file>')
-# default_app = firebase_admin.initialize_app(cred)
+cred = firebase_admin.credentials.Certificate('<Path to JSON credentials file>')
+default_app = firebase_admin.initialize_app(cred)
 
 # GCloud Instance:
-default_app = firebase_admin.initialize_app()
+# default_app = firebase_admin.initialize_app()
 
 
 @app.errorhandler(500)
