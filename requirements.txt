@@ -1,6 +1,6 @@
-Flask==0.12.2
-gunicorn==19.7.1
-Flask-SQLAlchemy==2.3.2
-PyMySQL==0.8.0
+Flask
+gunicorn
+Flask-SQLAlchemy
+PyMySQL
 requests
 firebase-admin
