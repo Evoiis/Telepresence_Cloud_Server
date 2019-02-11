@@ -13,6 +13,9 @@ pepper_routes = Blueprint('Pepper', __name__)
 def deauthorize():
     try:
         content = request.json
+        if content is None:
+            return Response(status=400)
+
         pep_id = content['pep_id']
         PSK = content['PSK']
         username = content['username']
@@ -40,10 +43,12 @@ def deauthorize():
 def find_user_auths():
     try:
         content = request.json
+        if content is None:
+            return Response(status=400)
+
         pep_id = content['pep_id']
         PSK = content['PSK']
     except KeyError:
-        print ("Missing Data")
         return Response(status=400)
 
     check_result = authentication.check_PSK(PSK, pep_id)
@@ -84,6 +89,9 @@ pepper_routes.add_url_rule('/getAuthUsers', 'list_Authorized_Users', find_user_a
 def authorizeUser():
     try:
         content = request.json
+        if content is None:
+            return Response(status=400)
+
         pep_id = content['pep_id']
         PSK = content['PSK']
         username = content['username']
@@ -121,12 +129,14 @@ def authorizeUser():
 def add_update_Pepper():
     try:
         content = request.json
+        if content is None:
+            return Response(status=400)
+
         pep_id = content['pep_id']
         ip = request.access_route[0]
         PSK = content['PSK']
         username = content['username']
     except KeyError:
-        print ("Missing Data")
         return Response(status=400)
 
     # Pepper App will send in a non-empty username when in first-time setup mode
@@ -185,12 +195,14 @@ def add_update_Pepper():
 def proactive():
     try:
         content = request.json
+        if content is None:
+            return Response(status=400)
+
         message = content['msg']
         PSK = content.pop('PSK')
         username = content.pop('android_username')
         pep_id = content.pop('pep_id')
     except KeyError:
-        print ("Missing Data")
         return Response(status=400)
 
     # Add path to content for Android App.

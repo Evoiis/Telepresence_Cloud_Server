@@ -104,9 +104,9 @@ def read_all(model_name):
 
 # Updates record with data in content
 def update(record, content):
-    
+
     for key in content.keys():
-        record.key = content[key]
+        setattr(record, key, content[key])
 
     db.session.commit()
 
@@ -122,13 +122,13 @@ def delete(record):
     return 0
 
 
-def wipe_db():
+def wipe():
     db.drop_all()
     db.create_all()
-    return "Database wiped."
+    return 0
 
 
-def ini_db(app):
+def initialize_db(app):
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
     print("Database initialized.")
@@ -147,32 +147,3 @@ def getModel(model_name):
         return None
 
     return model
-
-
-# -----------TEST-SET--------------------------------
-def test_set():
-    admin = User(username='admin', email='admin@example.com', name='Atho', password='admin', ASK='asdf', FBToken='')
-    subin = User(username='subin', email='subin@example.com', name='S', password='subin', ASK='asdf', FBToken='')
-    david = User(username='david', email='david@example.com', name='D', password='david', ASK='asdf', FBToken='')
-    kass = User(username='kass', email='kass@example.com', name='K', password='kass', ASK='asdf', FBToken='')
-
-    adminSalt = UserAuth(pep_id='salt', username='admin', email='admin@example.com', authorized=True)
-    subinSalt = UserAuth(pep_id='salt', username='subin', email='subin@example.com', authorized=True)
-    davidSalt = UserAuth(pep_id='salt', username='david', email='david@example.com', authorized=True)
-    kassSalt = UserAuth(pep_id='salt', username='kass', email='kass@example.com', authorized=True)
-
-    adminFraser = UserAuth(pep_id='fraser', username='admin', email='admin@example.com', authorized=False)
-    subinFraser = UserAuth(pep_id='fraser', username='subin', email='subin@example.com', authorized=False)
-    davidFraser = UserAuth(pep_id='fraser', username='david', email='david@example.com', authorized=False)
-    kassFraser = UserAuth(pep_id='fraser', username='kass', email='kass@example.com', authorized=False)
-
-    salt = Pepper(pep_id='Salt', ip_address='10.0.0.3', PSK='asdf')
-    fraser = Pepper(pep_id='fraser', ip_address='10.0.0.4', PSK='asdf')
-    simon = Pepper(pep_id='simon', ip_address='10.0.0.5', PSK='asdf')
-    fan = Pepper(pep_id='fan', ip_address='10.0.0.6', PSK='asdf')
-    window = Pepper(pep_id='window', ip_address='10.0.0.7', PSK='asdf')
-
-    db.session.add_all([admin, subin, david, kass])
-    db.session.add_all([adminSalt, adminFraser, subinSalt, davidSalt, subinFraser, davidFraser, kassFraser, kassSalt])
-    db.session.add_all([salt, fraser, simon, fan, window])
-    db.session.commit()

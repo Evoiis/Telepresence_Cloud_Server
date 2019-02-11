@@ -9,14 +9,17 @@ from firebase_admin import messaging
 game = Blueprint('Game', __name__)
 
 
-# --------------ANDROID-TO-PEPPER-GAME-ROUTES----------------
+# --------------ANDROID-TO-PEPPER-ROUTES----------------
 
 def relay_to_pepper():
     try:
         content = request.json
+        if content is None:
+            return Response(status=400)
+
         pep_id = content.pop('pep_id')
         username = content['android_username']
-        ASK = content['username']
+        ASK = content.pop('ASK')
     except KeyError:
         return Response(status=400)
 
@@ -51,7 +54,7 @@ def relay_to_pepper():
 
     # Send request to Pepper App
     try:
-        req = req_out.post(relay_ip + request.path, json=content)
+        req = req_out.post(relay_ip + request.path + "PEPPER", json=content)
     except req_out.exceptions.ConnectionError:
         record_updates = {'ip_address': ''}
         cloudsql.update(pepper, record_updates)
@@ -65,12 +68,15 @@ game.add_url_rule('/sendresults', 'Results', relay_to_pepper, methods=['POST'])
 game.add_url_rule('/pepperanimation', 'PepperAnimation', relay_to_pepper, methods=['POST'])
 
 
-# --------------PEPPER-TO-ANDROID-GAME-ROUTES----------------
+# --------------PEPPER-TO-ANDROID-ROUTES----------------
 
 
 def relay_to_android():
     try:
         content = request.json
+        if content is None:
+            return Response(status=400)
+
         username = content['android_username']
         pep_id = content['pep_id']
         PSK = content['PSK']

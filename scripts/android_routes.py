@@ -9,11 +9,14 @@ from flask import Blueprint, request, Response, jsonify
 android_routes = Blueprint('Android', __name__)
 
 
-# Used to relay a message from Android and send back a response from Pepper
+# Relays a message from Android to Pepper and send back a response to Android from Pepper
 @android_routes.route('/message', methods=['POST'])
 def message():
     try:
         content = request.json
+        if content is None:
+            return Response(status=400)
+
         username = content['username']
         pep_id = content['pep_id']
         ASK = content['ASK']
@@ -47,14 +50,14 @@ def message():
     if pepper.ip_address == '':
         return jsonify({'Error': "Pepper Application is inactive."}), 410
 
-    relay_ip = "http://" + pepper.ip_address + ":8080/message"
+    relay_ip = "http://" + pepper.ip_address + ":8080/PepperMessage"
 
     # Hash PSK from database
     new_PSK = authentication.hash_PSK(pepper.PSK)
 
     try:
         # Send request to Pepper
-        req = req_out.post(relay_ip, data=json.dumps({'msg': msg, 'PSK': new_PSK, 'username': username}))
+        req = req_out.post(relay_ip, json={'msg': msg, 'PSK': new_PSK, 'username': username})
     except req_out.exceptions.ConnectionError as error:
         # Set Pepper record to inactive
         record_updates = {'ip_address': ''}
@@ -71,15 +74,19 @@ def message():
         return Response(status=req.status_code)
 
 
-# Relays photo from Android to Pepper
+# Relays a photo from Android to Pepper
 @android_routes.route('/photo', methods=['POST'])
 def photo():
     try:
         content = request.form
+        if content is None:
+            return Response(status=400)
+
         username = content['username']
         pep_id = content['pep_id']
         ASK = content['ASK']
         photo_file = request.files['file']
+
     except KeyError:
         return Response(status=400)
 
@@ -112,7 +119,7 @@ def photo():
     if pepper.ip_address == '':
         return jsonify({'Error': "Pepper Application is inactive."}), 410
 
-    relay_ip = "http://" + pepper.ip_address + ":8080/photo"
+    relay_ip = "http://" + pepper.ip_address + ":8080/PepperPhoto"
     print("Sending photo to: " + relay_ip)
 
     # Hash PSK from database
@@ -135,11 +142,14 @@ def photo():
         return Response(status=200)
 
 
-# Create new authorization request and add to database
+# Create new authorization request and adds it to the database
 @android_routes.route('/reqAuth', methods=['POST'])
 def request_auth():
     try:
         content = request.json
+        if content is None:
+            return Response(status=400)
+
         pep_id = content['pep_id']
         username = content['username']
         email = content['email']
