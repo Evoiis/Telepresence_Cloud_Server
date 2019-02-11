@@ -1,10 +1,10 @@
 import cloudsql
 import authentication
 import json
-import requests as r
-from flask import Blueprint, request, Response
+import requests as req_out
+from flask import Blueprint, request, Response, jsonify
 
-# Routes sent exclusively from Android to Cloud Server
+# Routes for requests sent exclusively from Android to Cloud Server
 
 android_routes = Blueprint('Android', __name__)
 
@@ -19,7 +19,6 @@ def message():
         ASK = content['ASK']
         msg = content['message']
     except KeyError:
-        print ("Missing Data")
         return Response(status=400)
 
     # Check Android Security Key to authenticate request
@@ -46,7 +45,7 @@ def message():
 
     # Check if Pepper App is active
     if pepper.ip_address == '':
-        return Response(status=410)
+        return jsonify({'Error': "Pepper Application is inactive."}), 410
 
     relay_ip = "http://" + pepper.ip_address + ":8080/message"
 
@@ -55,21 +54,21 @@ def message():
 
     try:
         # Send request to Pepper
-        req = r.post(relay_ip, data=json.dumps({'msg': msg, 'PSK': new_PSK, 'username': username}))
-    except r.exceptions.ConnectionError as error:
+        req = req_out.post(relay_ip, data=json.dumps({'msg': msg, 'PSK': new_PSK, 'username': username}))
+    except req_out.exceptions.ConnectionError as error:
         # Set Pepper record to inactive
-        updates = {'ip_address': ''}
-        cloudsql.update(pepper, updates)
-        return Response(status=410)
+        record_updates = {'ip_address': ''}
+        cloudsql.update(pepper, record_updates)
+        return jsonify({'Error': "Pepper failed to respond."}), 410
 
     if req.status_code == 200:
         # Update PSK in database
-        updates = {'PSK': new_PSK}
-        cloudsql.update(pepper, updates)
+        record_updates = {'PSK': new_PSK}
+        cloudsql.update(pepper, record_updates)
         return req.text
 
     else:
-        return Response(status=200)
+        return Response(status=req.status_code)
 
 
 # Relays photo from Android to Pepper
@@ -82,7 +81,6 @@ def photo():
         ASK = content['ASK']
         photo_file = request.files['file']
     except KeyError:
-        print ("Missing Data")
         return Response(status=400)
 
     # Read file content and encode photo into base64 string.
@@ -112,7 +110,7 @@ def photo():
 
     # Check if Pepper is Active.
     if pepper.ip_address == '':
-        return Response(status=410)
+        return jsonify({'Error': "Pepper Application is inactive."}), 410
 
     relay_ip = "http://" + pepper.ip_address + ":8080/photo"
     print("Sending photo to: " + relay_ip)
@@ -121,17 +119,17 @@ def photo():
     new_PSK = authentication.hash_PSK(pepper.PSK)
 
     try:
-        req = r.post(relay_ip, json={'PSK': new_PSK, 'photo': encoded_photo})
-    except r.exceptions.ConnectionError:
+        req = req_out.post(relay_ip, json={'PSK': new_PSK, 'photo': encoded_photo})
+    except req_out.exceptions.ConnectionError:
         # Set Pepper record to inactive.
-        updates = {'ip_address': ''}
-        cloudsql.update(pepper, updates)
-        return Response(status=410)
+        record_updates = {'ip_address': ''}
+        cloudsql.update(pepper, record_updates)
+        return jsonify({'Error': "Pepper failed to respond."}), 410
 
     if req.status_code == 200:
         # Update PSK in database
-        updates = {'PSK': new_PSK}
-        cloudsql.update(pepper, updates)
+        record_updates = {'PSK': new_PSK}
+        cloudsql.update(pepper, record_updates)
         return req.text
     else:
         return Response(status=200)
@@ -147,7 +145,6 @@ def request_auth():
         email = content['email']
         ASK = content['ASK']
     except KeyError:
-        print ("Missing Data")
         return Response(status=400)
 
     # Check Android Security Key to authenticate request.

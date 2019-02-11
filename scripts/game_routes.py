@@ -1,6 +1,7 @@
-from flask import Blueprint, request, Response
 import cloudsql
-import requests as r
+import authentication
+import requests as req_out
+from flask import Blueprint, request, Response, jsonify
 from firebase_admin import messaging
 
 # Routes for Hangman game
@@ -14,14 +15,19 @@ def relay_to_pepper():
     try:
         content = request.json
         pep_id = content.pop('pep_id')
+        username = content['android_username']
+        ASK = content['username']
     except KeyError:
-        print ("Missing Data")
         return Response(status=400)
+
+    # Check Android Security Key to authenticate request
+    check = authentication.check_ASK(ASK, username)
+    if check is None or check is False:
+        return Response(status=403)
 
     if request.path == '/startgame':
         # Update FBToken for User in Database.
         try:
-            username = content['android_username']
             FBToken = content.pop('FBToken')
         except KeyError:
             return Response(status=400)
@@ -30,8 +36,8 @@ def relay_to_pepper():
         if user_query is None:
             return Response(status=409)
 
-        updates = {'FBToken': FBToken}
-        cloudsql.update(user_query, updates)
+        record_updates = {'FBToken': FBToken}
+        cloudsql.update(user_query, record_updates)
 
     pepper = cloudsql.read('Pepper', pep_id)
     if pepper is None:
@@ -43,12 +49,12 @@ def relay_to_pepper():
 
     relay_ip = "http://" + pepper.ip_address + ":8080"
 
-    # Send to Pepper App
+    # Send request to Pepper App
     try:
-        req = r.post(relay_ip + request.path, json=content)
-    except r.exceptions.ConnectionError:
-        updates = {'ip_address': ''}
-        cloudsql.update(pepper, updates)
+        req = req_out.post(relay_ip + request.path, json=content)
+    except req_out.exceptions.ConnectionError:
+        record_updates = {'ip_address': ''}
+        cloudsql.update(pepper, record_updates)
         return Response(status=410)
 
     return Response(status=req.status_code)
@@ -65,21 +71,29 @@ game.add_url_rule('/pepperanimation', 'PepperAnimation', relay_to_pepper, method
 def relay_to_android():
     try:
         content = request.json
-        username = content.pop('android_username')
+        username = content['android_username']
+        pep_id = content['pep_id']
+        PSK = content['PSK']
     except KeyError:
-        print ("Missing Data")
         return Response(status=400)
 
     content.update({'path': request.path[1:]})
 
+    check_result = authentication.check_PSK(PSK, pep_id)
+    if check_result is None:
+        return jsonify({'Error': "pep_id not found."}), 409
+    elif check_result is False:
+        return Response(status=403)
+
     # Find User from Database
     user_query = cloudsql.read('User', username)
     if user_query is None:
-        return Response(status=409)
+        return jsonify({'Error': "User not found."}), 409
 
+    # Create Firebase Message object
     fb_message = messaging.Message(
         data=content,
-        token=user_query.FBToken,
+        token=user_query.FBToken,   # Defines the Android app instance to send the message to
     )
     try:
         response = messaging.send(fb_message)

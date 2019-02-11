@@ -3,9 +3,12 @@ import hashlib
 import random
 import string
 
+RANDOM_STRING_LENGTH = 15
+
 # --------------AUTHENTICATION-FUNCTIONS------------------------
 
 
+# Compares input key to hashed key in database
 def check_PSK(key, pep_id):
     pepper_query = cloudsql.read('Pepper', pep_id)
     if pepper_query is None:
@@ -16,8 +19,8 @@ def check_PSK(key, pep_id):
 
     if next_cloud_key == key:
 
-        updates = {'PSK': next_cloud_key}
-        cloudsql.update(pepper_query, updates)
+        record_updates = {'PSK': next_cloud_key}
+        cloudsql.update(pepper_query, record_updates)
 
         return True
     else:
@@ -31,6 +34,7 @@ def hash_PSK(key):
     return result
 
 
+# Compares input key to hashed key in database
 def check_ASK(key, username):
     user_query = cloudsql.read('User', username)
     if user_query is None:
@@ -41,8 +45,8 @@ def check_ASK(key, username):
 
     if next_cloud_key == key:
 
-        updates = {'ASK': next_cloud_key}
-        cloudsql.update(user_query, updates)
+        record_updates = {'ASK': next_cloud_key}
+        cloudsql.update(user_query, record_updates)
         return True
     else:
         return False
@@ -58,4 +62,4 @@ def hash_ASK(key):
 
 def generate_random_string():
     letters = string.ascii_lowercase
-    return ''.join(random.choice(letters) for i in range(15))
+    return ''.join(random.choice(letters) for i in range(RANDOM_STRING_LENGTH))

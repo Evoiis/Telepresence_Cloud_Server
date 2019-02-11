@@ -1,4 +1,3 @@
-
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
@@ -18,12 +17,12 @@ class Pepper(db.Model):
         self.PSK = PSK
 
 
-#  Model acting as a junction table between Peppers and Users
+#  User Authorization model that links a pep_id and a username.
 class UserAuth(db.Model):
-    pep_id = db.Column(db.String(100), primary_key=True)
-    username = db.Column(db.String(100), primary_key=True)
+    pep_id = db.Column(db.String(100), primary_key=True)    # Identifier for Robot from Pepper Model
+    username = db.Column(db.String(100), primary_key=True)  # Identifier for User from User Model
     email = db.Column(db.String(100))
-    authorized = db.Column(db.Boolean)
+    authorized = db.Column(db.Boolean)                      # True for when a user is authorized for a pep_id, False for when a user is requesting authorization
 
     def __init__(self, pep_id, username, email, authorized):
         self.pep_id = pep_id
@@ -38,8 +37,8 @@ class User(db.Model):
     email = db.Column(db.String(100))
     name = db.Column(db.String(100))
     password = db.Column(db.String(100))
-    ASK = db.Column(db.String(100))         # Android Security Key for authentication between Android app and server
-    FBToken = db.Column(db.String(200))     # Firebase Token for sending notifications and hangman game data
+    ASK = db.Column(db.String(100))                         # Android Security Key for authentication between Android app and server
+    FBToken = db.Column(db.String(200))                     # Firebase Token for sending notifications and hangman game data
 
     def __init__(self, username, email, name, password, ASK, FBToken):
         self.username = username

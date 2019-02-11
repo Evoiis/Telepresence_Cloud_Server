@@ -3,7 +3,7 @@ import authentication
 from flask import Blueprint, request, Response, jsonify
 from firebase_admin import messaging
 
-# Routes sent exclusively from Pepper to Cloud Server.
+# Routes for requests sent exclusively from Pepper to Cloud Server.
 
 pepper_routes = Blueprint('Pepper', __name__)
 
@@ -19,15 +19,15 @@ def deauthorize():
     except KeyError:
         return Response(status=400)
 
-    check = authentication.check_PSK(PSK, pep_id)
-    if check is None:
-        return Response(status=409)
-    elif check is False:
+    check_result = authentication.check_PSK(PSK, pep_id)
+    if check_result is None:
+        return jsonify({'Error': "pep_id not found."}), 409
+    elif check_result is False:
         return Response(status=403)
 
     auth_query = cloudsql.read('Auth', (pep_id, username))
     if auth_query is None:
-        return Response(status=409)
+        return jsonify({'Error': "User Authorization not found."}), 409
     elif auth_query == -1:
         return Response(status=500)
 
@@ -37,7 +37,7 @@ def deauthorize():
 
 
 # Finds list of username and email tuples associated with a pep_id.
-def find_user_auth():
+def find_user_auths():
     try:
         content = request.json
         pep_id = content['pep_id']
@@ -46,10 +46,10 @@ def find_user_auth():
         print ("Missing Data")
         return Response(status=400)
 
-    check = authentication.check_PSK(PSK, pep_id)
-    if check is None:
+    check_result = authentication.check_PSK(PSK, pep_id)
+    if check_result is None:
         return Response(status=409)
-    elif check is False:
+    elif check_result is False:
         return Response(status=403)
 
     result_list = []
@@ -75,8 +75,8 @@ def find_user_auth():
         return jsonify({'AuthReqs': result_list})
 
 
-pepper_routes.add_url_rule('/getAuthRequests', 'list_Authorization_Requests', find_user_auth, methods=['POST'])
-pepper_routes.add_url_rule('/getAuthUsers', 'list_Authorized_Users', find_user_auth, methods=['POST'])
+pepper_routes.add_url_rule('/getAuthRequests', 'list_Authorization_Requests', find_user_auths, methods=['POST'])
+pepper_routes.add_url_rule('/getAuthUsers', 'list_Authorized_Users', find_user_auths, methods=['POST'])
 
 
 # Authorizes a user for a pep_id by updating the corresponding UserAuth record
@@ -88,13 +88,12 @@ def authorizeUser():
         PSK = content['PSK']
         username = content['username']
     except KeyError:
-        print ("Missing Data")
         return Response(status=400)
 
-    check = authentication.check_PSK(PSK, pep_id)
-    if check is None:
-        return jsonify({'Error': "Pep_id fot found."}), 409
-    elif check is False:
+    check_result = authentication.check_PSK(PSK, pep_id)
+    if check_result is None:
+        return jsonify({'Error': "pep_id not found."}), 409
+    elif check_result is False:
         return Response(status=403)
 
     user_query = cloudsql.read('User', username)
@@ -111,8 +110,8 @@ def authorizeUser():
     elif auth_query == -1:
         return Response(status=500)
 
-    updates = {'authorized': True}
-    cloudsql.update(auth_query, updates)
+    record_updates = {'authorized': True}
+    cloudsql.update(auth_query, record_updates)
 
     return Response(status=200)
 
@@ -134,7 +133,7 @@ def add_update_Pepper():
     if username != '':
         user_query = cloudsql.read('User', username)
         if user_query is None:
-            return Response(status=410)
+            return jsonify({'Error': "User not found."}), 410
         elif user_query == -1:
             return Response(status=500)
 
@@ -145,8 +144,8 @@ def add_update_Pepper():
 
     if pepper is None:
         if username == '':
-            # Pepper App has pep_id registered when it is not, send 410 to notify
-            return Response(status=410)
+            # Pepper App has pep_id registered when database does not, send 410 to notify
+            return jsonify({'Error': "Pepper not found. Please register again."}), 410
 
         # Register new Pepper into database
         new_pepper = {'pep_id': pep_id, 'ip_address': ip, 'PSK': PSK}
@@ -173,8 +172,8 @@ def add_update_Pepper():
             return Response(status=409)
 
         # Pepper already exists so update database record
-        updates = {'ip_address': ip, 'PSK': PSK}
-        cloudsql.update(pepper, updates)
+        record_updates = {'ip_address': ip, 'PSK': PSK}
+        cloudsql.update(pepper, record_updates)
 
         return Response(status=200)
 
@@ -197,10 +196,10 @@ def proactive():
     # Add path to content for Android App.
     content.update({'path': request.path[1:]})
 
-    check = authentication.check_PSK(PSK, pep_id)
-    if check is None:
+    check_result = authentication.check_PSK(PSK, pep_id)
+    if check_result is None:
         return Response(status=409)
-    elif check is False:
+    elif check_result is False:
         return Response(status=403)
 
     # Find User from Database
@@ -213,12 +212,14 @@ def proactive():
 
     notification = messaging.Notification("Pepper Alert!", message)
 
+    # Create Firebase Message object
     fb_message = messaging.Message(
         data=content,
         notification=notification,
-        token=user_query.FBToken,
+        token=user_query.FBToken,       # Defines the Android app instance to send the message to
     )
 
+    # Send to Android App
     try:
         response = messaging.send(fb_message)
     except:

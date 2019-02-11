@@ -1,16 +1,10 @@
 from scripts import game_routes, pepper_routes, android_routes
 from scripts import cloudsql, authentication
-
 from flask import Flask, request, jsonify, Response
 from werkzeug.security import generate_password_hash, check_password_hash
-import config
+# from firebase_admin import credentials
 import firebase_admin
-from firebase_admin import credentials
-
-# Definitions:
-# ASK = Android Security Key
-# PSK = Pepper Security Key
-# FBToken = Firebase Token
+import config
 
 app = Flask(__name__)
 app.register_blueprint(game_routes.game)
@@ -36,7 +30,7 @@ def login():
         username = content['username']
         password = content['password']
     except KeyError:
-        print ("Missing Data")
+        # Missing Data in request json
         return Response(status=400)
 
     # Check for FireBaseToken
@@ -45,7 +39,7 @@ def login():
     else:
         FBToken = False
 
-    # Check if login coming from Pepper App
+    # Check if login is coming from Pepper App.
     if request.path == '/pepperLogin':
         try:
             pep_id = content['pep_id']
@@ -95,8 +89,8 @@ def login():
         hashed_ASK = authentication.hash_ASK(ASK)
 
         # Update ASK and FBToken in database
-        updates = {'ASK': hashed_ASK, 'FBToken': FBToken}
-        cloudsql.update(user_query, updates)
+        record_updates = {'ASK': hashed_ASK, 'FBToken': FBToken}
+        cloudsql.update(user_query, record_updates)
 
         return jsonify(
             {'ASK': hashed_ASK, 'pepper_list': auth_pepper_list, 'request_list': req_list, 'email': user_query.email})
@@ -121,7 +115,7 @@ def create_user():
         print ("Missing Data")
         return Response(status=400)
 
-    # Generate ASK
+    # Generate Android Security Key
     ASK = authentication.generate_random_string()
 
     # Check if username is already used
@@ -129,7 +123,7 @@ def create_user():
     if user_query is not None:
         return Response(status=409)
 
-    # Hash password before saving into database
+    # Hash user password before saving into database
     hash_pw = generate_password_hash(password)
     new_user = {'username': username, 'password': hash_pw, 'email': email, 'name': name, 'ASK': ASK, 'FBToken': ''}
     cloudsql.create('User', new_user)
@@ -152,6 +146,7 @@ def delete_user():
     if user_query is None:
         return Response(status=409)
 
+    # Check password before deleting
     if check_password_hash(user_query.password, password):
         cloudsql.delete(user_query)
         return Response(status=200)
