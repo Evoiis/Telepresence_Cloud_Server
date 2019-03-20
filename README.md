@@ -16,4 +16,4 @@ Using Google App Engine and Google Cloud SQL, the Telepresence Cloud Server prov
 ### Testing with test_success.py
 * Set TESTING_MODE to True in main.py
 * Start Local Instance
-* run test_success with: python test_success.py
+* Run test_success with: python test_success.py
