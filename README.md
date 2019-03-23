@@ -1,13 +1,13 @@
 # Telepresence_Cloud_Server
 Cloud Server for Telepresence Software System
 
-Using Google App Engine and Google Cloud SQL, the Telepresence Cloud Server provides a database and serves as a relay between Pepper robots and Android devices.
+Using Google App Engine and Google Cloud SQL, the Telepresence Cloud Server provides access to a database and relays data between Pepper robots and Android devices.
 
 ### Built With
 * Python
 * Python Flask      -Web Framework
 * Flask-SQLAlchemy  -Object Relational Mapper for Cloud SQL
-* Requests          -HTTP Library to send requests
+* Requests          -HTTP Library to send requests to Pepper robots
 * Firebase-admin    -Use Firebase services to send data to Android devices
 
 ## Telepresence System Architecture
