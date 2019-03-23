@@ -7,7 +7,7 @@ Using Google App Engine and Google Cloud SQL, the Telepresence Cloud Server prov
 * Python
 * Python Flask      -Web Framework
 * Flask-SQLAlchemy  -Object Relational Mapper for Cloud SQL
-* Requests          -HTTP Library to send requests
+* Requests          -HTTP Library to send requests to Pepper robots
 * Firebase-admin    -Use Firebase services to send data to Android devices
 
 ## Telepresence System Architecture
